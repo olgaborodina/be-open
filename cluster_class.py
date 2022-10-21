@@ -110,7 +110,7 @@ class cluster():
     def CDF(self):
         
         CDF_x = np.sort(self.center_dist.value)
-        x_axis = np.linspace(1e-2, CDF_x.max(), 101)
+        x_axis = np.linspace(1e-2, CDF_x.max(), 1001)
         CDF = np.arange(1, len(self.center_dist) + 1) / len(self.center_dist)  #normalised CDF
         
         
@@ -194,7 +194,7 @@ class cluster():
         self.actual_errors = actual_errors
 
 
-    def fit_profiles(self, profile_select=['King', 'Plummer', 'Zhao']):
+    def fit_profiles(self, profile_select=['King', 'Plummer', 'Zhao'], show_plot=False):
         
         #the profile functions
         def Kings_profile(r, rho_0, r_c, r_t):
@@ -238,11 +238,11 @@ class cluster():
         
         def mle(init_guess,x,y,y_err,profile='King',print_solution=False):
             if profile == 'King':
-                bounds = np.array([[0, 0, 10], [1, 10, np.inf]]).T
+                bounds = np.array([[0, 0, 20], [1, 100, np.inf]]).T
             elif profile == 'Plummer':
-                bounds = np.array([[0, 0], [np.inf, 50]]).T
+                bounds = np.array([[0, 0], [np.inf, 500]]).T
             elif profile == 'Zhao':
-                bounds = np.array([[0, 0, 0], [np.inf, 50, 5]]).T
+                bounds = np.array([[0, 0, 0], [np.inf, 500, 5]]).T
                                  
             #getting the args for minimise function
             nll = lambda *args: -log_likelihood(*args)
@@ -257,7 +257,7 @@ class cluster():
                 'Zhao':['rho_0', 'a', 'gamma'],
             }
         
-            if print_solution==True:
+            if print_solution==False:
                 
                 print('-' * 30)
                 print('Message: ', soln.message)
@@ -280,9 +280,8 @@ class cluster():
         
             return soln
         
-        x_axis = np.linspace(1e-2, self.CDF_x.max(), 101)
+        x_axis = np.linspace(1e-2, self.CDF_x.max(), 1001)
         CDF_interp_func = scipy.interpolate.interp1d(self.CDF_x,self.CDF, fill_value="extrapolate")
-        plt.plot(x_axis, CDF_interp_func(x_axis), label='data')
         
         profiles_dict = {
             'King':[],
@@ -296,8 +295,12 @@ class cluster():
             'Zhao':[],
         }
 
+        if show_plot:
+            plt.figure()
+            plt.plot(x_axis, CDF_interp_func(x_axis), label='data')
+
         for profile in profile_select:
-            
+        
             #err array 
             np.random.seed(42)
             yerr  = np.array(self.actual_errors) #np.random.normal(size=len(CDF)) / 1e10
@@ -326,11 +329,13 @@ class cluster():
             
             criterion_dict[profile] = [AIC, BIC]
             
-            print(profile, '\n AIC: ' + str(AIC), '\n BIC: ' + str(BIC))
-            plt.plot(x_axis, pdf2cdf(x_axis, profile, *soln.x), alpha=0.3, lw=3, label=profile)
-            plt.legend(fontsize=14)
-            plt.xlabel("x")
-            plt.ylabel("y")
+            # print(profile, '\n AIC: ' + str(AIC), '\n BIC: ' + str(BIC))
+            if show_plot == True:
+                plt.plot(x_axis, pdf2cdf(x_axis, profile, *soln.x), alpha=0.3, lw=3, label=profile)
+                plt.legend(fontsize=14)
+                plt.xlabel("x [pc]")
+                plt.ylabel("CDF")
+
             
         self.profiles = profiles_dict
         self.criterion = criterion_dict
